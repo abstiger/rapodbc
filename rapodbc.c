@@ -60,8 +60,8 @@ typedef struct _col_desc_t
 }T_ColDesc;
 T_ColDesc gtColumns[256] = {{0}};
 
-static char gcSplitTableFlag; /*'N'-非拆分表, 'M'-月拆分表, 'D'-日拆分表*/
-static int  giSplitColInDex; /*拆分字段编号*/
+static char gcSplitTableFlag; /*'N'-no split, 'M'-Monthly split, 'D'-day split*/
+static int  giSplitColInDex; /*split field id*/
 #define MON_SPLIT "MON_SETTLE_DT"
 #define DAY_SPLIT "DAY_SETTLE_DT"
 
@@ -328,10 +328,9 @@ static int GetDynStatement(void)
     }
 
     memset(gszInputSql, 0x00, sizeof(gszInputSql));
-    while (fgets(linebuf, 1024, fpcfg) != NULL)
+    while (fgets(linebuf, sizeof(linebuf), fpcfg) != NULL)
     {
-        for (cp = linebuf; *cp; cp++)
-        {
+        for (cp = linebuf; *cp; cp++) {
             if ((*cp == '\r')||(*cp == '\n'))
                 *cp = ' ';
             else
@@ -662,13 +661,13 @@ int GenCurImplementation(FILE *fp)
     fprintf(fp, "#include \"dbs_basopr.h\" \n");
     fprintf(fp, "#include \"%s.h\"\n\n", gszHeaderName);
 
-    /* 游标初始化函数*/
+    /* struct initial */
     fprintf(fp, "void dbs%sInit(T_%s *pt%s)\n", gszRegulatedName, gszRegulatedName, gszRegulatedName);
     fprintf(fp, "{\n");
     fprintf(fp, "    memset(pt%s, 0x00, sizeof(T_%s));\n", gszRegulatedName, gszRegulatedName);
     fprintf(fp, "}\n\n\n");
 
-    /*游标操作函数*/
+    /* cursor operation functions */
     fprintf(fp, "int dbs%s(T_DbsEnv *dbsenv, int iFuncCode, T_%s *pt%s)\n", gszRegulatedName, gszRegulatedName, gszRegulatedName);
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
@@ -679,7 +678,7 @@ int GenCurImplementation(FILE *fp)
     }
     fprintf(fp, "    switch (iFuncCode)\n");
     fprintf(fp, "    {\n");
-    /* open cursor 函数 */
+    /* open cursor */
     fprintf(fp, "      case KR_DBCUROPEN:\n");
     if (gcSplitTableFlag == 'M') {
         fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
@@ -722,7 +721,7 @@ int GenCurImplementation(FILE *fp)
     }
     fprintf(fp, "          return rc;\n\n");
 
-    /* fetch 函数 */
+    /* fetch */
     fprintf(fp, "      case KR_DBCURFETCH:\n");
     //fprintf(fp, "          memset(pt%s, 0x00, sizeof(T_%s));\n", gszRegulatedName, gszRegulatedName);
     fprintf(fp, "          rc = SQLFetch(dbsenv->hstmt);\n");
@@ -731,7 +730,7 @@ int GenCurImplementation(FILE *fp)
     fprintf(fp, "          }\n");
     fprintf(fp, "          return rc;\n\n");
 
-    /* close cursor 函数 */
+    /* close cursor */
     fprintf(fp, "      case KR_DBCURCLOSE:\n");
     fprintf(fp, "          rc = SQLFreeHandle(SQL_HANDLE_STMT, dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
@@ -767,14 +766,13 @@ int GenUpdImplementation(FILE *fp)
 
     GenComment(fp);
 
-    /* 通讯区定义 */
     fprintf(fp, "#include <stdio.h> \n");
     fprintf(fp, "#include <stdlib.h> \n");
     fprintf(fp, "#include <string.h> \n");
     fprintf(fp, "#include \"dbs_basopr.h\" \n");
     fprintf(fp, "#include \"%s.h\"\n\n", gszHeaderName);
 
-    /* 更新函数操作 */
+    /* update functions */
     fprintf(fp, "int dbs%s(T_DbsEnv *dbsenv, T_%s *pt%s)\n", gszRegulatedName, gszRegulatedName, gszRegulatedName);
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
@@ -839,20 +837,19 @@ int GenSelImplementation(FILE *fp)
     }
     GenComment(fp);
 
-    /* 通讯区定义 */
     fprintf(fp, "#include <stdio.h> \n");
     fprintf(fp, "#include <stdlib.h> \n");
     fprintf(fp, "#include <string.h> \n");
     fprintf(fp, "#include \"dbs_basopr.h\" \n");
     fprintf(fp, "#include \"%s.h\"\n\n", gszHeaderName);
 
-    /* 初始化函数 */
+    /* struct initial */
     fprintf(fp, "void dbs%sInit(T_%s *pt%s)\n", gszRegulatedName, gszRegulatedName, gszRegulatedName);
     fprintf(fp, "{\n");
     fprintf(fp, "    memset(pt%s, 0x00, sizeof(*pt%s));\n", gszRegulatedName, gszRegulatedName);
     fprintf(fp, "}\n\n\n");
 
-    /* 操作函数 */
+    /* operation functions */
     fprintf(fp, "int dbs%s(T_DbsEnv *dbsenv, int iFuncCode, T_%s *pt%s)\n", gszRegulatedName, gszRegulatedName, gszRegulatedName);
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
@@ -860,7 +857,7 @@ int GenSelImplementation(FILE *fp)
     fprintf(fp, "    char hca%sSql[2048+1]={0};\n", gszRegulatedName);
     fprintf(fp, "    switch (iFuncCode)\n");
     fprintf(fp, "    {\n");
-    /* select函数 */
+    /* select */
     fprintf(fp, "      case KR_DBSELECT:\n");
     if (gcSplitTableFlag == 'M') {
         fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
@@ -944,10 +941,6 @@ int GenVarDefinition(FILE *fp, int iArea)
                         gtColumns[i].caFieldName);
                 break;
         }
-        fprintf(fp, "    %-12s%s%sInd;", \
-                "long", 
-                gtColumns[i].caPrefix, 
-                gtColumns[i].caFieldName);
         fprintf(fp,"\n");
     }
     return 0;
