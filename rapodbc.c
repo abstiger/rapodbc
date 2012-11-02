@@ -44,7 +44,7 @@ typedef struct _dbs_env_t
 {
     SQLHENV    henv;
     SQLHDBC    hdbc;
-	SQLHSTMT   hstmt;
+    SQLHSTMT   hstmt;
 }T_DbsEnv;
 
 typedef struct _col_desc_t
@@ -115,14 +115,14 @@ int main(int argc, char *argv[])
     /* Open header file */
     if ((fpHead = fopen(gszHeadFileName, "wt")) == NULL) {
         fprintf(stderr, "open headfile %s error:[%s]\n", \
-				gszHeadFileName, strerror(errno));
+                gszHeadFileName, strerror(errno));
         return -1;
     }
 
     /* Open ource file */
     if ((fpSrc = fopen(gszSrcFileName, "wt")) == NULL) {
         fprintf(stderr, "open srcfile %s error:[%s]\n", \
-				gszSrcFileName, strerror(errno));
+                gszSrcFileName, strerror(errno));
         return -1;
     }
 
@@ -133,8 +133,8 @@ int main(int argc, char *argv[])
         if (GenCurImplementation(fpSrc))
             exit(-1);
     } else if ( strstr(gszCfgFileName, "_upd.cfg") != 0 ||
-			strstr(gszCfgFileName, "_ins.cfg") != 0 ||
-			strstr(gszCfgFileName, "_del.cfg") != 0 ) {
+            strstr(gszCfgFileName, "_ins.cfg") != 0 ||
+            strstr(gszCfgFileName, "_del.cfg") != 0 ) {
         if (GenUpdHeader(fpHead))
             exit(-1);
         if (GenUpdImplementation(fpSrc))
@@ -157,85 +157,85 @@ int main(int argc, char *argv[])
 
 static T_DbsEnv *ConnectDB(void)
 {
-	SQLRETURN rc = SQL_SUCCESS; 
+    SQLRETURN rc = SQL_SUCCESS; 
     char  hszDBName[128];
     char  hszDBUser[128];
     char  hszDBPass[32];
 
     if (getenv("DBUSER") != NULL) {    
-		strncpy(hszDBUser, getenv("DBUSER"), sizeof(hszDBUser));
-	}
+        strncpy(hszDBUser, getenv("DBUSER"), sizeof(hszDBUser));
+    }
     if (getenv("DBPASS") != NULL) {    
-		strncpy(hszDBPass, getenv("DBPASS"), sizeof(hszDBPass));
-	}
+        strncpy(hszDBPass, getenv("DBPASS"), sizeof(hszDBPass));
+    }
     if (getenv("DBNAME") != NULL) {    
-		strncpy(hszDBName, getenv("DBNAME"), sizeof(hszDBName));
-	}
+        strncpy(hszDBName, getenv("DBNAME"), sizeof(hszDBName));
+    }
 
-	printf("DBNAME:[%s], DBUSER:[%s], DBPASS:[%s].\n", \
-			hszDBName, hszDBUser, hszDBPass);
+    printf("DBNAME:[%s], DBUSER:[%s], DBPASS:[%s].\n", \
+            hszDBName, hszDBUser, hszDBPass);
 
-	T_DbsEnv *dbsenv = calloc(1, sizeof(T_DbsEnv));
-	if (dbsenv == NULL) {
-		fprintf(stderr, "calloc DbsEnv failed:[%d]!\n", rc);
-		goto failure;
-	}
+    T_DbsEnv *dbsenv = calloc(1, sizeof(T_DbsEnv));
+    if (dbsenv == NULL) {
+        fprintf(stderr, "calloc DbsEnv failed:[%d]!\n", rc);
+        goto failure;
+    }
 
-	rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &dbsenv->henv);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLAllocHandle ENV failed:[%d]!\n", rc);
-		goto failure;
-	}
-	
-	rc = SQLSetEnvAttr(dbsenv->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER) SQL_OV_ODBC3, 0);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLSetEnvAttr failed:[%d]!\n", rc);
-		goto failure;
-	}
+    rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &dbsenv->henv);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLAllocHandle ENV failed:[%d]!\n", rc);
+        goto failure;
+    }
+    
+    rc = SQLSetEnvAttr(dbsenv->henv, SQL_ATTR_ODBC_VERSION, (SQLPOINTER) SQL_OV_ODBC3, 0);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLSetEnvAttr failed:[%d]!\n", rc);
+        goto failure;
+    }
 
-	rc = SQLAllocHandle(SQL_HANDLE_DBC, dbsenv->henv, &dbsenv->hdbc);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLAllocHandle DBC failed:[%d]!\n", rc);
-		goto failure;
-	}
+    rc = SQLAllocHandle(SQL_HANDLE_DBC, dbsenv->henv, &dbsenv->hdbc);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLAllocHandle DBC failed:[%d]!\n", rc);
+        goto failure;
+    }
 
-	rc = SQLSetConnectAttr(dbsenv->hdbc, SQL_ATTR_ODBC_CURSORS, (SQLPOINTER) SQL_CUR_USE_ODBC, 0);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLSetConnectAttr failed:[%d]!\n", rc);
-		goto failure;
-	}
+    rc = SQLSetConnectAttr(dbsenv->hdbc, SQL_ATTR_ODBC_CURSORS, (SQLPOINTER) SQL_CUR_USE_ODBC, 0);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLSetConnectAttr failed:[%d]!\n", rc);
+        goto failure;
+    }
 
-	rc = SQLConnect(dbsenv->hdbc, (SQLCHAR *)hszDBName, SQL_NTS, (SQLCHAR *)hszDBUser, SQL_NTS, (SQLCHAR *)hszDBPass, SQL_NTS );
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLConnect failed:[%d]!\n", rc);
-		goto failure;
-	}
-	return dbsenv;
+    rc = SQLConnect(dbsenv->hdbc, (SQLCHAR *)hszDBName, SQL_NTS, (SQLCHAR *)hszDBUser, SQL_NTS, (SQLCHAR *)hszDBPass, SQL_NTS );
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLConnect failed:[%d]!\n", rc);
+        goto failure;
+    }
+    return dbsenv;
 
 failure:
-	if (dbsenv) {
-		if (dbsenv->hdbc) {
-			SQLDisconnect(dbsenv->hdbc);
-		    SQLFreeHandle(SQL_HANDLE_DBC, dbsenv->hdbc);
-		}
-		if (dbsenv->henv) SQLFreeHandle(SQL_HANDLE_ENV, dbsenv->henv);
-		free(dbsenv);
-	}
-	return NULL;
+    if (dbsenv) {
+        if (dbsenv->hdbc) {
+            SQLDisconnect(dbsenv->hdbc);
+            SQLFreeHandle(SQL_HANDLE_DBC, dbsenv->hdbc);
+        }
+        if (dbsenv->henv) SQLFreeHandle(SQL_HANDLE_ENV, dbsenv->henv);
+        free(dbsenv);
+    }
+    return NULL;
 }
 
 
 static int DisconnectDB(T_DbsEnv *dbsenv)
 {
-	if (dbsenv) {
-		if (dbsenv->hdbc) {
-			SQLDisconnect(dbsenv->hdbc);
-		    SQLFreeHandle(SQL_HANDLE_DBC, dbsenv->hdbc);
-		}
-		if (dbsenv->henv) SQLFreeHandle(SQL_HANDLE_ENV, dbsenv->henv);
-		free(dbsenv);
-	}
-	return 0;
+    if (dbsenv) {
+        if (dbsenv->hdbc) {
+            SQLDisconnect(dbsenv->hdbc);
+            SQLFreeHandle(SQL_HANDLE_DBC, dbsenv->hdbc);
+        }
+        if (dbsenv->henv) SQLFreeHandle(SQL_HANDLE_ENV, dbsenv->henv);
+        free(dbsenv);
+    }
+    return 0;
 }
 
 
@@ -323,7 +323,7 @@ static int GetDynStatement(void)
 
     if ((fpcfg = fopen(gszCfgFileName, "rt")) == NULL) {
         fprintf(stderr, "fopen configure file [%s] error£º%s\n", \
-				gszCfgFileName, strerror(errno));
+                gszCfgFileName, strerror(errno));
         return errno;
     }
 
@@ -439,7 +439,7 @@ static int RetrieveInputParams(void)
         /* Get Type */
         pszToken = strtok(NULL, "#");
         if (!pszToken) {
-			fprintf(stderr, "Need #Type# Define.\n");
+            fprintf(stderr, "Need #Type# Define.\n");
             return -1;
         }
         if (ParseToken(&tCol, pszToken) != 0) {
@@ -450,8 +450,8 @@ static int RetrieveInputParams(void)
         /* Get The Next */
         pszToken = strtok(NULL, ":");
         if (!pszToken) {
-			fprintf(stderr, "delimiter not match!.\n");
-			return -1;
+            fprintf(stderr, "delimiter not match!.\n");
+            return -1;
         }
 
         memcpy(&gtColumns[iCol], &tCol, sizeof(T_ColDesc));
@@ -466,74 +466,74 @@ static int RetrieveInputParams(void)
 static int RetrieveOutputParams(void)
 {
     int i = 0;
-	SQLSMALLINT iNumCols = 0;
-	SQLRETURN rc = SQL_SUCCESS;
-	T_DbsEnv  *ptDbsEnv;
+    SQLSMALLINT iNumCols = 0;
+    SQLRETURN rc = SQL_SUCCESS;
+    T_DbsEnv  *ptDbsEnv;
     T_ColDesc tColDesc;
 
-	struct _col_def_t
-	{
-		SQLCHAR        caColName[100];
-		SQLSMALLINT    iColNameSize;
-		SQLSMALLINT    iType;
-		SQLULEN        iLength;
-		SQLSMALLINT    iScale;
-		SQLSMALLINT    iNullable;
-	} tColDef;
+    struct _col_def_t
+    {
+        SQLCHAR        caColName[100];
+        SQLSMALLINT    iColNameSize;
+        SQLSMALLINT    iType;
+        SQLULEN        iLength;
+        SQLSMALLINT    iScale;
+        SQLSMALLINT    iNullable;
+    } tColDef;
 
-	/* connect db */
-	ptDbsEnv = ConnectDB();
+    /* connect db */
+    ptDbsEnv = ConnectDB();
     if (ptDbsEnv == NULL) {
         fprintf(stderr, "ConnectDB Error! \n\n");
         return -1;
     }
 
-	/* alloc statement handler */
-	rc = SQLAllocHandle(SQL_HANDLE_STMT, ptDbsEnv->hdbc, &ptDbsEnv->hstmt);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLAllocHandle stmt failed:[%d]!\n", rc);
-		return -1;
-	}
+    /* alloc statement handler */
+    rc = SQLAllocHandle(SQL_HANDLE_STMT, ptDbsEnv->hdbc, &ptDbsEnv->hstmt);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLAllocHandle stmt failed:[%d]!\n", rc);
+        return -1;
+    }
     
-	/* prepare sql statement */
-	rc = SQLPrepare(ptDbsEnv->hstmt, (SQLCHAR *)hszSqlStmt, SQL_NTS);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLPrepare [%s] failed:[%d]!\n", hszSqlStmt, rc);
-		return -1;
-	}
+    /* prepare sql statement */
+    rc = SQLPrepare(ptDbsEnv->hstmt, (SQLCHAR *)hszSqlStmt, SQL_NTS);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLPrepare [%s] failed:[%d]!\n", hszSqlStmt, rc);
+        return -1;
+    }
 
-	/* get output result columns */
-	rc = SQLNumResultCols(ptDbsEnv->hstmt, &iNumCols);
-	if (rc != SQL_SUCCESS) {
-		fprintf(stderr, "SQLNumResultCols %s failed:[%d]!\n", hszSqlStmt, rc);
-		return -1;
-	}
+    /* get output result columns */
+    rc = SQLNumResultCols(ptDbsEnv->hstmt, &iNumCols);
+    if (rc != SQL_SUCCESS) {
+        fprintf(stderr, "SQLNumResultCols %s failed:[%d]!\n", hszSqlStmt, rc);
+        return -1;
+    }
 
     giOutputColumns = iNumCols;
     for (i=1; i<=iNumCols; i++)
     {        
         memset(&tColDef, 0x00, sizeof(tColDef));
-		rc = SQLDescribeCol(ptDbsEnv->hstmt, i, 
-				(SQLCHAR *)tColDef.caColName,
-				(SQLSMALLINT )sizeof(tColDef.caColName), 
-				(SQLSMALLINT *)&tColDef.iColNameSize,
-				(SQLSMALLINT *)&tColDef.iType, 
-				(SQLULEN *)&tColDef.iLength, 
-				(SQLSMALLINT *)&tColDef.iScale, 
-				(SQLSMALLINT *)&tColDef.iNullable);
-		if (rc != SQL_SUCCESS) {
-			fprintf(stderr, "SQLDescribeCol field [%d] failed:[%d]!\n", i, rc);
-			return -1;
-		}
+        rc = SQLDescribeCol(ptDbsEnv->hstmt, i, 
+                (SQLCHAR *)tColDef.caColName,
+                (SQLSMALLINT )sizeof(tColDef.caColName), 
+                (SQLSMALLINT *)&tColDef.iColNameSize,
+                (SQLSMALLINT *)&tColDef.iType, 
+                (SQLULEN *)&tColDef.iLength, 
+                (SQLSMALLINT *)&tColDef.iScale, 
+                (SQLSMALLINT *)&tColDef.iNullable);
+        if (rc != SQL_SUCCESS) {
+            fprintf(stderr, "SQLDescribeCol field [%d] failed:[%d]!\n", i, rc);
+            return -1;
+        }
 
-		/* set column attribute */
+        /* set column attribute */
         memset(&tColDesc, 0x00, sizeof(tColDesc));
         switch (tColDef.iType)
         {
             case SQL_CHAR:
             case SQL_VARCHAR:
             case SQL_DATETIME:
-			case -1: /*sqlite let varchar(500) field type  -1...*/
+            case -1: /*sqlite let varchar(500) field type  -1...*/
                 tColDesc.iType = KR_SQL_TYPE_CHAR;
                 strcpy(tColDesc.caColType, "char");
                 strcpy(tColDesc.caSqlType, "SQL_C_CHAR");
@@ -548,13 +548,13 @@ static int RetrieveOutputParams(void)
                 if ((tColDesc.iScale > 0) || (tColDesc.iLength > 19)) {
                     tColDesc.iType = KR_SQL_TYPE_DOUBLE;
                     strcpy(tColDesc.caColType, "double");
-					strcpy(tColDesc.caSqlType, "SQL_C_DOUBLE");
+                    strcpy(tColDesc.caSqlType, "SQL_C_DOUBLE");
                     strcpy(tColDesc.caPrefix, "d");
                     strcat(tColDesc.caPrefix, "Out");
                 } else {
                     tColDesc.iType = KR_SQL_TYPE_LONG;
                     strcpy(tColDesc.caColType, "long");
-					strcpy(tColDesc.caSqlType, "SQL_C_LONG");
+                    strcpy(tColDesc.caSqlType, "SQL_C_LONG");
                     strcpy(tColDesc.caPrefix, "l");
                     strcat(tColDesc.caPrefix, "Out");
                 }
@@ -563,19 +563,19 @@ static int RetrieveOutputParams(void)
             case SQL_SMALLINT:
                 tColDesc.iType = KR_SQL_TYPE_LONG;     
                 strcpy(tColDesc.caColType, "long");
-				strcpy(tColDesc.caSqlType, "SQL_C_LONG");
+                strcpy(tColDesc.caSqlType, "SQL_C_LONG");
                 strcpy(tColDesc.caPrefix, "l");
                 strcat(tColDesc.caPrefix, "Out");
                 break;
             default:
                 printf("unsupported type(%d) (%d) (%s)\n", \
-						tColDef.iType, (int )tColDef.iLength, 
-						(char *)tColDef.caColName);
+                        tColDef.iType, (int )tColDef.iLength, 
+                        (char *)tColDef.caColName);
                 return -1;
         }
-		tColDesc.iDir = 1;
-		tColDesc.iLength = tColDef.iLength;
-		tColDesc.iScale = tColDef.iScale;
+        tColDesc.iDir = 1;
+        tColDesc.iLength = tColDef.iLength;
+        tColDesc.iScale = tColDef.iScale;
         strcpy(tColDesc.caFieldName, (char *)tColDef.caColName);
         RegulateName(tColDesc.caFieldName);
         memcpy(&gtColumns[giInputColumns+i-1], &tColDesc, sizeof(T_ColDesc));
@@ -700,26 +700,26 @@ int GenCurImplementation(FILE *fp)
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
     int i;
-	for (i=0; i<giInputColumns; i++) {
-		fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
-				i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale,  gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
-				gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
-		fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
-		fprintf(fp, "              return rc;\n");
-		fprintf(fp, "          }\n");
-	}
+    for (i=0; i<giInputColumns; i++) {
+        fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
+                i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale,  gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
+                gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
+        fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
+        fprintf(fp, "              return rc;\n");
+        fprintf(fp, "          }\n");
+    }
     fprintf(fp, "          rc = SQLExecute(dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
     for (i=giInputColumns; i<giInputColumns + giOutputColumns; i++) {
-		fprintf(fp, "          rc = SQLBindCol(dbsenv->hstmt, %d, %s, %spt%s->%s%s, %d, &hLen);\n", \
-				i-giInputColumns+1, gtColumns[i].caSqlType, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&",\
-				gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
-		fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
-		fprintf(fp, "              return rc;\n");
-		fprintf(fp, "          }\n");
-	}
+        fprintf(fp, "          rc = SQLBindCol(dbsenv->hstmt, %d, %s, %spt%s->%s%s, %d, &hLen);\n", \
+                i-giInputColumns+1, gtColumns[i].caSqlType, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&",\
+                gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
+        fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
+        fprintf(fp, "              return rc;\n");
+        fprintf(fp, "          }\n");
+    }
     fprintf(fp, "          return rc;\n\n");
 
     /* fetch º¯Êý */
@@ -802,14 +802,14 @@ int GenUpdImplementation(FILE *fp)
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
     int i;
-	for (i=0; i<giInputColumns; i++) {
-		fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
-				i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&",\
-				gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iLength);
-		fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
-		fprintf(fp, "              return rc;\n");
-		fprintf(fp, "          }\n");
-	}
+    for (i=0; i<giInputColumns; i++) {
+        fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
+                i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&",\
+                gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iLength);
+        fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
+        fprintf(fp, "              return rc;\n");
+        fprintf(fp, "          }\n");
+    }
     fprintf(fp, "          rc = SQLExecute(dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
@@ -880,26 +880,26 @@ int GenSelImplementation(FILE *fp)
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
-	for (i=0; i<giInputColumns; i++) {
-		fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
-				i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
-				gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
-		fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
-		fprintf(fp, "              return rc;\n");
-		fprintf(fp, "          }\n");
-	}
+    for (i=0; i<giInputColumns; i++) {
+        fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
+                i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
+                gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
+        fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
+        fprintf(fp, "              return rc;\n");
+        fprintf(fp, "          }\n");
+    }
     fprintf(fp, "          rc = SQLExecute(dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
     for (i=giInputColumns; i<giInputColumns + giOutputColumns; i++) {
-		fprintf(fp, "          rc = SQLBindCol(dbsenv->hstmt, %d, %s, %spt%s->%s%s, %d, &hLen);\n", \
-				i-giInputColumns+1, gtColumns[i].caSqlType, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
-				gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
-		fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
-		fprintf(fp, "              return rc;\n");
-		fprintf(fp, "          }\n");
-	}
+        fprintf(fp, "          rc = SQLBindCol(dbsenv->hstmt, %d, %s, %spt%s->%s%s, %d, &hLen);\n", \
+                i-giInputColumns+1, gtColumns[i].caSqlType, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
+                gszRegulatedName, gtColumns[i].caPrefix, gtColumns[i].caFieldName, gtColumns[i].iType == KR_SQL_TYPE_CHAR?gtColumns[i].iLength+1:0);
+        fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
+        fprintf(fp, "              return rc;\n");
+        fprintf(fp, "          }\n");
+    }
     fprintf(fp, "          rc = SQLFetch(dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
@@ -932,22 +932,22 @@ int GenVarDefinition(FILE *fp, int iArea)
         {
             case KR_SQL_TYPE_CHAR:
                 fprintf(fp, "    %-12s%s%s[%d+1];", \
-						gtColumns[i].caColType, 
-						gtColumns[i].caPrefix, 
-						gtColumns[i].caFieldName, 
-						gtColumns[i].iLength);
+                        gtColumns[i].caColType, 
+                        gtColumns[i].caPrefix, 
+                        gtColumns[i].caFieldName, 
+                        gtColumns[i].iLength);
                 break;
             default:
                 fprintf(fp, "    %-12s%s%s;", \
-						gtColumns[i].caColType, 
-						gtColumns[i].caPrefix, 
-						gtColumns[i].caFieldName);
+                        gtColumns[i].caColType, 
+                        gtColumns[i].caPrefix, 
+                        gtColumns[i].caFieldName);
                 break;
         }
-		fprintf(fp, "    %-12s%s%sInd;", \
-				"long", 
-				gtColumns[i].caPrefix, 
-				gtColumns[i].caFieldName);
+        fprintf(fp, "    %-12s%s%sInd;", \
+                "long", 
+                gtColumns[i].caPrefix, 
+                gtColumns[i].caFieldName);
         fprintf(fp,"\n");
     }
     return 0;
@@ -956,19 +956,19 @@ int GenVarDefinition(FILE *fp, int iArea)
 
 int GenComment(FILE *fp)
 {
-	char caTime[1024] = {0};
-	time_t t;
-	struct tm *ptm;
-	t = time(NULL);
-	ptm = localtime(&t);
-	strftime(caTime, sizeof(caTime), "%c", ptm);
-	fprintf(fp, "/******************************************************************************\n");
-	fprintf(fp, " *             This file was generated by rapodbc automatically.              *\n");
-	fprintf(fp, " *                     Don't modify it by yourself!                           *\n");
-	fprintf(fp, " *   Author: Tiger(https://github.com/AbsoluteTiger/rapodbc)                  *\n");
-	fprintf(fp, " *      Time: %s                               *\n", caTime);
-	fprintf(fp, " ******************************************************************************/\n");
-	fprintf(fp, "\n");
-	return 0;
+    char caTime[1024] = {0};
+    time_t t;
+    struct tm *ptm;
+    t = time(NULL);
+    ptm = localtime(&t);
+    strftime(caTime, sizeof(caTime), "%c", ptm);
+    fprintf(fp, "/******************************************************************************\n");
+    fprintf(fp, " *             This file was generated by rapodbc automatically.              *\n");
+    fprintf(fp, " *                     Don't modify it by yourself!                           *\n");
+    fprintf(fp, " *   Author: Tiger(https://github.com/AbsoluteTiger/rapodbc)                  *\n");
+    fprintf(fp, " *      Time: %s                               *\n", caTime);
+    fprintf(fp, " ******************************************************************************/\n");
+    fprintf(fp, "\n");
+    return 0;
 }
 

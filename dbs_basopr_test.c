@@ -8,14 +8,14 @@ T_DbsEnv *gptDbsEnv = NULL;
 
 int main(int argc, char *argv[])
 {
-	gptDbsEnv = dbsConnect("aicdb", "Tiger", "haha");
-	if (gptDbsEnv == NULL) {
-		fprintf(stderr, "dbsConnect Failed!\n");
-		return -1;
-	}
+    gptDbsEnv = dbsConnect("aicdb", "Tiger", "haha");
+    if (gptDbsEnv == NULL) {
+        fprintf(stderr, "dbsConnect Failed!\n");
+        return -1;
+    }
 
-	dbsDisconnect(gptDbsEnv);
+    dbsDisconnect(gptDbsEnv);
 
-	return 0;
+    return 0;
 }
 
