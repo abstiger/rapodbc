@@ -18,11 +18,9 @@ EXAMPLES=t_dbs101_datasrc_def_cur.o \
 	     t_dbs306_hdi_flag_sel.o \
 	     t_dbs401_rule_cur.o
 
-%.c: %.cfg
+%.o: %.cfg
 	$(RAP) $*
-
-%.o: %.c 
-	$(CC) $(CFLAGS) -c $^
+	$(CC) $(CFLAGS) -c $*.c
 
 all: libexamples.so 
 
