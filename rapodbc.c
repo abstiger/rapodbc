@@ -52,7 +52,7 @@ typedef struct _col_desc_t
 }T_ColDesc;
 T_ColDesc gtColumns[256] = {{0}};
 
-
+/* function declaration */
 static T_DbsEnv *ConnectDB(void);
 static int DisconnectDB(T_DbsEnv *dbsenv);
 static void RegulateName(char *name);
