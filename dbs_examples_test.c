@@ -11,7 +11,24 @@ static int dbsDatasrcFieldDefSel_test(T_DbsEnv *dbsenv);
 
 int main(int argc, char *argv[])
 {
-    dbsenv = dbsConnect("mysqlite3db", "", "");
+    char  hszDBName[128];
+    char  hszDBUser[128];
+    char  hszDBPass[32];
+
+    if (getenv("DBUSER") != NULL) {    
+        strncpy(hszDBUser, getenv("DBUSER"), sizeof(hszDBUser));
+    }
+    if (getenv("DBPASS") != NULL) {    
+        strncpy(hszDBPass, getenv("DBPASS"), sizeof(hszDBPass));
+    }
+    if (getenv("DBNAME") != NULL) {    
+        strncpy(hszDBName, getenv("DBNAME"), sizeof(hszDBName));
+    }
+
+    printf("DBNAME:[%s], DBUSER:[%s], DBPASS:[%s].\n", \
+            hszDBName, hszDBUser, hszDBPass);
+
+    dbsenv = dbsConnect(hszDBName, hszDBUser, hszDBPass);
     if (dbsenv == NULL) {
         fprintf(stderr, "dbsConnect Failed!\n");
         return -1;

@@ -61,6 +61,7 @@ static int GetDynStatement(void);
 static int ParseToken(T_ColDesc *ptCol, char *pszToken);
 static int RetrieveInputParams(void);
 static int RetrieveOutputParams(void);
+static int ConstructHostSql(FILE *fp);
 static int GenComment(FILE *fp);
 static int GenVarDefinition(FILE *fp,int iArea);
 static int GenCurHeader(FILE *fp);
@@ -507,6 +508,10 @@ static int RetrieveOutputParams(void)
             return -1;
         }
 
+        printf("get field [%s] (%d) (%d) (%d) (%s)\n", \
+                (char *)tColDef.caColName,
+                tColDef.iType, (int )tColDef.iLength, (int )tColDef.iScale,
+                (char *)tColDef.caColName);
         /* set column attribute */
         memset(&tColDesc, 0x00, sizeof(tColDesc));
         switch (tColDef.iType)
@@ -514,7 +519,6 @@ static int RetrieveOutputParams(void)
             case SQL_CHAR:
             case SQL_VARCHAR:
             case SQL_DATETIME:
-            case -1: /*sqlite let varchar(500) field type  -1...*/
                 tColDesc.iType = KR_SQL_TYPE_CHAR;
                 strcpy(tColDesc.caColType, "char");
                 strcpy(tColDesc.caSqlType, "SQL_C_CHAR");
@@ -526,7 +530,7 @@ static int RetrieveOutputParams(void)
             case SQL_FLOAT:
             case SQL_REAL:
             case SQL_DOUBLE:
-                if ((tColDesc.iScale > 0) || (tColDesc.iLength > 19)) {
+                if ((tColDef.iScale > 0) || (tColDef.iLength > 19)) {
                     tColDesc.iType = KR_SQL_TYPE_DOUBLE;
                     strcpy(tColDesc.caColType, "double");
                     strcpy(tColDesc.caSqlType, "SQL_C_DOUBLE");
@@ -542,6 +546,22 @@ static int RetrieveOutputParams(void)
                 break;
             case SQL_INTEGER:
             case SQL_SMALLINT:
+                tColDesc.iType = KR_SQL_TYPE_LONG;     
+                strcpy(tColDesc.caColType, "long");
+                strcpy(tColDesc.caSqlType, "SQL_C_LONG");
+                strcpy(tColDesc.caPrefix, "l");
+                strcat(tColDesc.caPrefix, "Out");
+                break;
+            case -1: /*sqlite let varchar(500) field type  -1...*/
+                if (tColDef.iLength == 500) {
+                    tColDesc.iType = KR_SQL_TYPE_CHAR;
+                    strcpy(tColDesc.caColType, "char");
+                    strcpy(tColDesc.caSqlType, "SQL_C_CHAR");
+                    strcpy(tColDesc.caPrefix, "ca");    
+                    strcat(tColDesc.caPrefix, "Out");
+                    break;
+                }
+            case -5: /* mysql let count field type -5...*/
                 tColDesc.iType = KR_SQL_TYPE_LONG;     
                 strcpy(tColDesc.caColType, "long");
                 strcpy(tColDesc.caSqlType, "SQL_C_LONG");
@@ -666,11 +686,11 @@ int GenSelHeader(FILE *fp)
     return 0;
 }
 
-int GenCurImplementation(FILE *fp)
+static int ConstructHostSql(FILE *fp)
 {
     char szSqlStatement[5000+1];
-    strcpy(szSqlStatement, hszSqlStmt);
 
+    strcpy(szSqlStatement, hszSqlStmt);
     if (gcSplitTableFlag != 'N') {
         char *p = strstr(szSqlStatement, "01 ");
         if (p != NULL) {
@@ -682,7 +702,26 @@ int GenCurImplementation(FILE *fp)
             return -1;
         }
     }
+    
+    fprintf(fp, "    char hca%sSql[2048+1]={0};\n", gszRegulatedName);
+    /* Add For Split Table*/
+    if (gcSplitTableFlag == 'M') {
+        fprintf(fp, "    char caSplitVal[2+1] = {0};\n");
+        fprintf(fp, "    memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
+        fprintf(fp, "    snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
+    } else if (gcSplitTableFlag == 'D') {
+        fprintf(fp, "    char caSplitVal[2+1] = {0};\n");
+        fprintf(fp, "    memcpy(caSplitVal, &htTemp%s.%s%s[6], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
+        fprintf(fp, "    snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
+    } else {
+        fprintf(fp, "    strcpy(hca%sSql, \"%s\");\n", gszRegulatedName, szSqlStatement);
+    }
 
+    return 0;
+}
+
+int GenCurImplementation(FILE *fp)
+{
     GenComment(fp);
 
     fprintf(fp, "#include <stdio.h> \n");
@@ -702,24 +741,12 @@ int GenCurImplementation(FILE *fp)
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
     fprintf(fp, "    SQLLEN hLen = 0;\n");
-    fprintf(fp, "    char hca%sSql[2048+1]={0};\n", gszRegulatedName);
-    if (gcSplitTableFlag != 'N') {
-        fprintf(fp, "    char caSplitVal[2+1] = {0};\n");
-    }
     fprintf(fp, "    switch (iFuncCode)\n");
     fprintf(fp, "    {\n");
     /* open cursor */
     fprintf(fp, "      case KR_DBCUROPEN:\n");
-    if (gcSplitTableFlag == 'M') {
-        fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "          snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else if (gcSplitTableFlag == 'D') {
-        fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[6], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "          snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else {
-        fprintf(fp, "          strcpy(hca%sSql, \"%s\");\n", gszRegulatedName, szSqlStatement);
-    }
-
+    fprintf(fp, "      {\n");
+    ConstructHostSql(fp);
     fprintf(fp, "          rc = SQLAllocHandle(SQL_HANDLE_STMT, dbsenv->hdbc, &dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
@@ -749,7 +776,8 @@ int GenCurImplementation(FILE *fp)
         fprintf(fp, "              return rc;\n");
         fprintf(fp, "          }\n");
     }
-    fprintf(fp, "          return rc;\n\n");
+    fprintf(fp, "          return rc;\n");
+    fprintf(fp, "      }\n");
 
     /* fetch */
     fprintf(fp, "      case KR_DBCURFETCH:\n");
@@ -780,20 +808,6 @@ int GenCurImplementation(FILE *fp)
 
 int GenUpdImplementation(FILE *fp)
 {
-    char szSqlStatement[5000+1];
-    strcpy(szSqlStatement, hszSqlStmt);
-    if (gcSplitTableFlag != 'N') {
-        char *p = strstr(szSqlStatement, "01 ");
-        if (p != NULL) {
-            *p++ = '%';
-            *p++ = '2';
-            *p++ = 's';
-        } else {
-            fprintf(stderr, "Split Table Name Need With \"01 \" Terminated!\n");
-            return -1;
-        }
-    }
-
     GenComment(fp);
 
     fprintf(fp, "#include <stdio.h> \n");
@@ -807,20 +821,7 @@ int GenUpdImplementation(FILE *fp)
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
     fprintf(fp, "    SQLLEN hLen = 0;\n");
-    fprintf(fp, "    char hca%sSql[2048+1]={0};\n", gszRegulatedName);
-    if (gcSplitTableFlag != 'N' ) {
-        fprintf(fp, "    char caSplitVal[2+1] = {0};\n");
-    }
-    /* Add For Split Table*/
-    if (gcSplitTableFlag == 'M') {
-        fprintf(fp, "    memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "    snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else if (gcSplitTableFlag == 'D') {
-        fprintf(fp, "    memcpy(caSplitVal, &htTemp%s.%s%s[6], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "    snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else {
-        fprintf(fp, "    strcpy(hca%sSql, \"%s\");\n", gszRegulatedName, szSqlStatement);
-    }
+    ConstructHostSql(fp);
     fprintf(fp, "          rc = SQLAllocHandle(SQL_HANDLE_STMT, dbsenv->hdbc, &dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
@@ -842,7 +843,7 @@ int GenUpdImplementation(FILE *fp)
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
-    fprintf(fp, "    return rc;\n\n");
+    fprintf(fp, "    return rc;\n");
     fprintf(fp, "}\n\n\n");
     return 0;
 }
@@ -850,21 +851,6 @@ int GenUpdImplementation(FILE *fp)
 
 int GenSelImplementation(FILE *fp)
 {
-    int i;
-    char szSqlStatement[5000+1];
-    strcpy(szSqlStatement, hszSqlStmt);
-
-    if (gcSplitTableFlag != 'N') {
-        char *p = strstr(szSqlStatement, "01 ");
-        if (p != NULL) {
-            *p++ = '%';
-            *p++ = '2';
-            *p++ = 's';
-        } else {
-            fprintf(stderr, "Split-table should terminated with \"01 \"!\n");
-            return -1;
-        }
-    }
     GenComment(fp);
 
     fprintf(fp, "#include <stdio.h> \n");
@@ -884,21 +870,12 @@ int GenSelImplementation(FILE *fp)
     fprintf(fp, "{\n");
     fprintf(fp, "    SQLRETURN rc = SQL_SUCCESS;\n");
     fprintf(fp, "    SQLLEN hLen = 0;\n");
-    fprintf(fp, "    char hca%sSql[2048+1]={0};\n", gszRegulatedName);
     fprintf(fp, "    switch (iFuncCode)\n");
     fprintf(fp, "    {\n");
     /* select */
     fprintf(fp, "      case KR_DBSELECT:\n");
-    if (gcSplitTableFlag == 'M') {
-        fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[4], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "          snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else if (gcSplitTableFlag == 'D') {
-        fprintf(fp, "          memcpy(caSplitVal, &htTemp%s.%s%s[6], 2);\n", gszRegulatedName, gtColumns[giSplitColInDex].caPrefix, gtColumns[giSplitColInDex].caFieldName);
-        fprintf(fp, "          snprintf(hca%sSql, sizeof(hca%sSql), \"%s\", caSplitVal);\n", gszRegulatedName, gszRegulatedName, szSqlStatement);
-    } else {
-        fprintf(fp, "          strcpy(hca%sSql, \"%s\");\n", gszRegulatedName, szSqlStatement);
-    }
-
+    fprintf(fp, "      {\n");
+    ConstructHostSql(fp);
     fprintf(fp, "          rc = SQLAllocHandle(SQL_HANDLE_STMT, dbsenv->hdbc, &dbsenv->hstmt);\n");
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
@@ -907,6 +884,7 @@ int GenSelImplementation(FILE *fp)
     fprintf(fp, "          if (rc != SQL_SUCCESS) {\n");
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
+    int i;
     for (i=0; i<giInputColumns; i++) {
         fprintf(fp, "          rc = SQLBindParameter(dbsenv->hstmt, %d, SQL_PARAM_INPUT, %s, %s, %d, %d, %spt%s->%s%s, %d, &hLen);\n", \
                 i+1, gtColumns[i].caSqlType, gtColumns[i].caSqlType, gtColumns[i].iLength, gtColumns[i].iScale, gtColumns[i].iType == KR_SQL_TYPE_CHAR?"":"&", \
@@ -937,7 +915,8 @@ int GenSelImplementation(FILE *fp)
     fprintf(fp, "              return rc;\n");
     fprintf(fp, "          }\n");
 
-    fprintf(fp, "          return rc;\n\n");
+    fprintf(fp, "          return rc;\n");
+    fprintf(fp, "      }\n");
     /*default*/
     fprintf(fp, "      default:\n");
     fprintf(fp, "          return -1;\n");
