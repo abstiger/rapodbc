@@ -11,7 +11,7 @@ Dependence
 * sqlite3 odbc driver from: http://www.ch-werner.de/sqliteodbc/
 
 Here comes a short explaination for this tool in chinese.
-http://absolutetiger.com/rapodbca-wrapper-of-unixodbc/
+http://absolutetiger.com/?p=82
 
 Check Makefile and examples for details.
 
